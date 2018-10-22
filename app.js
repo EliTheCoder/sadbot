@@ -19,7 +19,20 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const Discord = require("discord.js");
 const fs = require("fs");
-const firebase = require("firebase");
+const admin = require('firebase-admin');
+
+const serviceAccount = require('path/to/serviceAccountKey.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://sadbois-01.firebaseio.com'
+});
+
+const db = admin.firestore();
+
+const defaultData = {
+  sadness: 100
+}
 
 const token = JSON.parse(fs.readFileSync('tokenconfig.json')).token;
 console.log(token);
@@ -28,8 +41,9 @@ const client = new Discord.Client();
 client.login(token);
 
 let prefix = "--"
+let errormsg = "oopsie poopsie there wuz and error pweez contact <@470935011722395651>"
 
-var config = {
+const config = {
   apiKey: "AIzaSyBTJNnGuQsM_HIvi_SS3_-YwEU4NNW-iXU",
   authDomain: "sadbois-01.firebaseapp.com",
   databaseURL: "https://sadbois-01.firebaseio.com",
@@ -39,8 +53,13 @@ firebase.initializeApp(config);
 
 client.on("message", msg => {
   commands.forEach((cmd) => {
-    if (msg.content.substring(prefix.length, msg.content.indexOf(" ")) === cmd.name) {
-      msg.reply(""+cmd.run(msg.content.split(" ")));
+    if (msg.content.startsWith(prefix)) {
+      if (msg.content.substring(prefix.length, msg.content.length) === cmd.name && !msg.content.includes(" ")) {
+        msg.reply(""+cmd.run());
+      }
+      if (msg.content.substring(prefix.length, msg.content.indexOf(" ")) === cmd.name && msg.content.includes(" ")) {
+        msg.reply(""+cmd.run(msg.content.split(" ")));
+      }
     }
   });
 });
@@ -49,12 +68,27 @@ const commands = [
   {
     name: "register",
     run: (args) => {
-      let rtrn = "";
-      firebase.auth().createUserWithEmailAndPassword(args[1], args[2]).catch((err) => {console.log(err)});
-      if (rtrn.length == 0) {
-        rtrn = "u created an account gj"
-      }
+      let rtrn = "gj, u created an account";
+      firebase.auth().createUserWithEmailAndPassword(args[1], args[2]).catch((err) => {console.log(err); return err.message})
       return rtrn;
+    }
+  },
+  {
+    name: "ping",
+    run: () => {
+      return "pong boi " + client.ping + "ms";
+    }
+  },
+  {
+    name: "pong",
+    run: () => {
+      return "ping boi " + client.ping + "ms";
+    }
+  },
+  {
+    name: "help",
+    run: () => {
+      return "here r da commands:\nregister registers an account\nping pings\npong pongs";
     }
   }
 ];
