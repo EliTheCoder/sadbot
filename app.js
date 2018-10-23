@@ -19,9 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 const Discord = require("discord.js");
 const fs = require("fs");
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
+const functions = require("firebase-functions");
+const Firestore = require("@google-cloud/firestore");
 
-const serviceAccount = require('path/to/serviceAccountKey.json');
+const serviceAccount = require('./keys/serviceAccountKey.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -30,9 +32,9 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-const defaultData = {
-  sadness: 100
-}
+const firestore = new Firestore();
+const settings = {timestampsInSnapshots: true};
+firestore.settings(settings);
 
 const token = JSON.parse(fs.readFileSync('tokenconfig.json')).token;
 console.log(token);
@@ -43,22 +45,22 @@ client.login(token);
 let prefix = "--"
 let errormsg = "oopsie poopsie there wuz and error pweez contact <@470935011722395651>"
 
-const config = {
-  apiKey: "AIzaSyBTJNnGuQsM_HIvi_SS3_-YwEU4NNW-iXU",
-  authDomain: "sadbois-01.firebaseapp.com",
-  databaseURL: "https://sadbois-01.firebaseio.com",
-  storageBucket: "sadbois-01.appspot.com"
-};
-firebase.initializeApp(config);
+// const config = {
+//   apiKey: "AIzaSyBTJNnGuQsM_HIvi_SS3_-YwEU4NNW-iXU",
+//   authDomain: "sadbois-01.firebaseapp.com",
+//   databaseURL: "https://sadbois-01.firebaseio.com",
+//   storageBucket: "sadbois-01.appspot.com"
+// };
+// firebase.initializeApp(config);
 
 client.on("message", msg => {
   commands.forEach((cmd) => {
     if (msg.content.startsWith(prefix)) {
       if (msg.content.substring(prefix.length, msg.content.length) === cmd.name && !msg.content.includes(" ")) {
-        msg.reply(""+cmd.run());
+        msg.reply(""+cmd.run(msg));
       }
       if (msg.content.substring(prefix.length, msg.content.indexOf(" ")) === cmd.name && msg.content.includes(" ")) {
-        msg.reply(""+cmd.run(msg.content.split(" ")));
+        msg.reply(""+cmd.run(msg.content.split(" "), msg));
       }
     }
   });
@@ -67,28 +69,30 @@ client.on("message", msg => {
 const commands = [
   {
     name: "register",
-    run: (args) => {
-      let rtrn = "gj, u created an account";
-      firebase.auth().createUserWithEmailAndPassword(args[1], args[2]).catch((err) => {console.log(err); return err.message})
-      return rtrn;
+    run: (msg) => {
+      db.collection("users").doc(""+msg.author.id).set({id: msg.author.id, name: msg.author.username, sadness: 100});
+      return "u created an account buddy, gj";
     }
   },
   {
     name: "ping",
     run: () => {
-      return "pong boi " + client.ping + "ms";
+      return "pong boi " + Math.round(client.ping*1000000) + " nanoseconds aka " + Math.round(client.ping) + "ms";
     }
   },
   {
     name: "pong",
     run: () => {
-      return "ping boi " + client.ping + "ms";
+      return "ping boi " + Math.round(client.ping*1000000) + " nanoseconds aka " + Math.round(client.ping) + "ms";
     }
   },
   {
     name: "help",
     run: () => {
-      return "here r da commands:\nregister registers an account\nping pings\npong pongs";
+      return "here r da commands:\n" +
+      "register: registers an account\n" +
+      "ping: pongs\n" +
+      "pong: pings";
     }
   }
 ];
